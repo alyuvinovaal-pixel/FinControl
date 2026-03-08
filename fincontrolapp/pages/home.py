@@ -43,8 +43,8 @@ class HomePage(BasePage):
                 # Быстрые действия
                 ft.Text("Быстрые действия", size=16, weight=ft.FontWeight.W_600, color="#FFFFFF"),
                 ft.Row([
-                    self._quick_action(ft.Icons.ADD_CIRCLE_OUTLINE, "Доход", "#4CAF50"),
-                    self._quick_action(ft.Icons.REMOVE_CIRCLE_OUTLINE, "Расход", "#F44336"),
+                    self._quick_action(ft.Icons.ADD_CIRCLE_OUTLINE, "Доходы", "#4CAF50"),
+                    self._quick_action(ft.Icons.REMOVE_CIRCLE_OUTLINE, "Расходы", "#F44336"),
                     self._quick_action(ft.Icons.STAR_OUTLINE, "Цель", "#6C63FF"),
                     self._quick_action(ft.Icons.SUBSCRIPTIONS_OUTLINED, "Подписка", "#FF9800"),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -70,7 +70,7 @@ class HomePage(BasePage):
             width=78,
             content=ft.Column([
                 ft.Icon(icon, color=color, size=28),
-                ft.Text(label, size=12, color="#CCCCCC", text_align=ft.TextAlign.CENTER),
+                ft.Text(label, size=12, color="#CCCCCC", text_align=ft.TextAlign.CENTER, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
             ink=True,
         )

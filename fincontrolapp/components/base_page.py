@@ -10,7 +10,7 @@ class BasePage(ft.Container):
         self.page_title = title
         self.expand = True
         self.bgcolor = "#0F0F14"
-        self.padding = ft.padding.only(left=16, right=16, top=16, bottom=8)
+        self.padding = ft.padding.only(left=16, right=16, top=48, bottom=8)
         self.content = ft.Column(
             controls=[self.build_header(), self.build_body()],
             expand=True,
