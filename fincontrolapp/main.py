@@ -27,11 +27,16 @@ def main(page: ft.Page):
     """
 
     # --- Настройки страницы ---
+    page.fonts = {"Montserrat": "fonts/Montserrat-Regular.ttf", 
+                  "Montserrat Bold": "fonts/Montserrat-Bold.ttf",
+                  "Montserrat Semibold": "fonts/Montserrat-SemiBold.ttf",
+                  "Montserrat Medium": "fonts/Montserrat-Medium.ttf",
+                  "Montserrat Extrabold": "fonts/Montserrat-ExtraBold.ttf"}
+
     page.title = "FinControl"
     page.theme_mode = ft.ThemeMode.LIGHT   # всегда светлая тема (можно добавить переключатель в настройках)
     page.bgcolor = AppTheme.BG_PAGE        # фоновый цвет (почти чёрный)
     page.padding = 0                      # убираем стандартные отступы страницы
-
     # --- Тёмная тема ---
     page.theme = ft.Theme(
         color_scheme=ft.ColorScheme(

@@ -21,8 +21,22 @@ class HomePage(BasePage):
             page (ft.Page): объект страницы Flet, передаётся из main.py.
         """
         super().__init__(page, "Главная")
-
+ 
+    def build_header(self):
+        """Переопределяем заголовок страницы (AppBar)"""
+        return ft.AppBar(
+            title=ft.Text(
+                "Главная",
+                font_family="Montserrat Extrabold",
+                size=36,
+            ),
+            center_title=False,
+            bgcolor=ft.Colors.TRANSPARENT,
+            elevation=0,
+            toolbar_height=30,
+        )
     def build_body(self):
+        
         """
         Строит тело главного экрана.
 
@@ -40,25 +54,36 @@ class HomePage(BasePage):
                 self._balance_card(),
 
                 # Быстрые действия
-                ft.Text("Быстрые действия", size=16, weight=ft.FontWeight.W_600, color="#FFFFFF"),
+                ft.Text("Быстрые действия", size=20, font_family="Montserrat Semibold", color="#000000"),
                 ft.Row([
-                    self._quick_action_icon(ft.Icons.ADD_CIRCLE_OUTLINE,     "Доходы",  "#4CAF50", lambda e: self.page_ref.data["navigate"](1)),
-                    self._quick_action_icon(ft.Icons.REMOVE_CIRCLE_OUTLINE,  "Расходы", "#F44336", lambda e: self.page_ref.data["navigate"](1)),
-                    self._quick_action_icon(ft.Icons.STAR_OUTLINE,           "Цель",    "#6C63FF", lambda e: self.page_ref.data["navigate"](2)),
-                    self._quick_action_icon(ft.Icons.SUBSCRIPTIONS_OUTLINED, "Подписка","#FF9800", lambda e: self.page_ref.data["navigate"](4)),
+                    self._quick_action_icon(ft.Icons.ADD_CIRCLE_OUTLINE,     "Доходы",  "#000000", lambda e: self.page_ref.data["navigate"](1)),
+                    self._quick_action_icon(ft.Icons.REMOVE_CIRCLE_OUTLINE,  "Расходы", "#000000", lambda e: self.page_ref.data["navigate"](1)),
+                    self._quick_action_icon(ft.Icons.STAR_OUTLINE,           "Цель",    "#000000", lambda e: self.page_ref.data["navigate"](2)),
+                    self._quick_action_icon(ft.Icons.SUBSCRIPTIONS_OUTLINED, "Подписки","#000000", lambda e: self.page_ref.data["navigate"](4)),
                 ], spacing=12),
 
                 # Последние операции
-                ft.Text("Последние операции", size=16, weight=ft.FontWeight.W_600, color="#FFFFFF"),
+                ft.Text("Последние операции", size=20, font_family="Montserrat Semibold", color="#000000"),
                 ft.Container(
-                    bgcolor="#1A1A24",
-                    border_radius=16,
-                    padding=16,
-                    content=ft.Text("Операций пока нет", color="#888888", size=14),
+                height=80,
+                expand=True,
+                border_radius=16,
+                gradient=ft.LinearGradient(
+                    colors=["#ffffff", "#88A2FF"],
+                    begin=ft.Alignment(-1, -1),
+                    end=ft.Alignment(1, 1),
                 ),
-            ],
-            spacing=16,
-        )
+                alignment=ft.Alignment(0, 0),
+                content=ft.Text(
+                    "Операций пока нет",
+                    color="#000000",
+                    font_family="Montserrat Semibold",
+                    size=14
+                ),
+            ),
+        ],
+        spacing=20,
+    )
 
     def _balance_card(self):
         return ft.Container(
@@ -76,8 +101,8 @@ class HomePage(BasePage):
                     ft.Container(
                         padding=24,
                         content=ft.Column([
-                            ft.Text("Общий баланс", size=14, color="rgba(0,0,0,0.5)"),
-                            ft.Text("0 ₽", size=36, weight=ft.FontWeight.BOLD, color="#000000"),
+                            ft.Text("Общий баланс", size=20, font_family="Montserrat Semibold", color="rgba(0,0,0,0.3)"),
+                            ft.Text("0 ₽", font_family="Montserrat Semibold", size=36, color="#000000"),
                             ft.Row([
                                 ft.Container(
                                     bgcolor="#E3FC87",
@@ -85,8 +110,8 @@ class HomePage(BasePage):
                                     padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                                     content=ft.Row([
                                         ft.Icon(ft.Icons.ARROW_UPWARD, color="#2A4A00", size=16),
-                                        ft.Text("Доходы: 0 ₽", color="#2A4A00", size=13,
-                                                weight=ft.FontWeight.W_500),
+                                        ft.Text("Доходы: 0 ₽", font_family="Montserrat Semibold", color="#2A4A00", size=14,
+                                                ),
                                     ], spacing=4),
                                 ),
                                 ft.Container(
@@ -95,8 +120,8 @@ class HomePage(BasePage):
                                     padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                                     content=ft.Row([
                                         ft.Icon(ft.Icons.ARROW_DOWNWARD, color="#4A3A00", size=16),
-                                        ft.Text("Расходы: 0 ₽", color="#4A3A00", size=13,
-                                                weight=ft.FontWeight.W_500),
+                                        ft.Text("Расходы: 0 ₽", font_family="Montserrat Semibold", color="#4A3A00", size=14,
+                                                ),
                                     ], spacing=4),
                                 ),
                             ], spacing=8),
@@ -120,21 +145,28 @@ class HomePage(BasePage):
                           реагирует на нажатие (ink=True).
         """
         return ft.Container(
-            border_radius=12,
-            padding=12,
+            border_radius=18,
+            padding=10,
             width=78,
             on_click=on_click,
+        gradient=ft.LinearGradient(
+            colors=["#ffffff", "#88A2FF"],
+            begin=ft.Alignment(-1, -1),  # top-left
+            end=ft.Alignment(1, 1),     # bottom-right
+        ),
+        
+
             content=ft.Column([
                 ft.Container(
-                    width=40,
-                    height=40,
-                    border_radius=20,
-                    bgcolor=color + "22",  # цвет с прозрачностью ~13%
-                    content=ft.Icon(icon, color=color, size=24),
+                    width=44,
+                    height=44,
+                    border_radius=14,
+                    bgcolor=color + "33",  # цвет с прозрачностью ~13%
+                    content=ft.Icon(icon, color=color, size=26),
                     alignment=ft.Alignment(0, 0),
                 ),
                 ft.Text(
-                    label, size=12, color="#CCCCCC",
+                    label, font_family="Montserrat Medium", size=12, color="#1a1a1a",
                     text_align=ft.TextAlign.CENTER,
                     max_lines=1,
                     overflow=ft.TextOverflow.ELLIPSIS,
