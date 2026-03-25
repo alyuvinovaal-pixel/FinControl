@@ -16,6 +16,11 @@ CATEGORY_ICONS = {
     "Другое": (ft.Icons.MORE_HORIZ, "#607D8B"),
 }
 
+MONTH_NAMES = [
+    "январь", "февраль", "март", "апрель", "май", "июнь",
+    "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+]
+
 class ExpensesPage(BasePage):
     def __init__(self, page: ft.Page):
         self._selected_category_id = None
@@ -24,11 +29,18 @@ class ExpensesPage(BasePage):
 
     def build_body(self):
         categories = get_categories(type_='expense')
-        expenses = get_transactions(
+        expenses_all = get_transactions(
             self._user_id, type_='expense',
             category_id=self._selected_category_id,
         )
-        title = f"История: {self._selected_category_name}" if self._selected_category_name else "История расходов"
+        expenses = [t for t in expenses_all if self._is_current_month(t['date'])]
+        period = self._current_period_label()
+        month_total = sum(t['amount'] for t in expenses)
+        title = (
+            f"История: {self._selected_category_name}"
+            if self._selected_category_name
+            else "История расходов"
+        )
 
         return ft.Column([
             ft.Text("Категории", size=16, weight=ft.FontWeight.W_600, color="#1A1A24"),
@@ -45,6 +57,19 @@ class ExpensesPage(BasePage):
                     if self._selected_category_id else ft.Container(),
                 ],
             ),
+            ft.Container(
+                bgcolor="#FFF3E0",
+                border_radius=10,
+                padding=ft.Padding.only(left=10, right=10, top=6, bottom=6),
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.CALENDAR_MONTH, size=14, color="#EF6C00"),
+                        ft.Text(f"Период: {period}", size=12, color="#EF6C00"),
+                        ft.Text(f"Сумма: {month_total:,.0f} ₽", size=12, color="#C62828"),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+            ),
             self._expense_list(expenses),
             ft.ElevatedButton(
                 "＋ Добавить расход",
@@ -53,6 +78,17 @@ class ExpensesPage(BasePage):
                 on_click=self._open_add_dialog,
             ),
         ], spacing=16)
+
+    def _is_current_month(self, value):
+        if not value:
+            return False
+        dt = str(value)
+        month_key = date.today().strftime("%Y-%m")
+        return dt.startswith(month_key)
+
+    def _current_period_label(self):
+        today = date.today()
+        return f"{MONTH_NAMES[today.month - 1]} {today.year}"
 
     def _category_card(self, category):
         icon, color = CATEGORY_ICONS.get(category['name'], (ft.Icons.MORE_HORIZ, "#607D8B"))
@@ -157,7 +193,7 @@ class ExpensesPage(BasePage):
             value=str(self._selected_category_id) if self._selected_category_id else None,
         )
         amount_field = ft.TextField(label="Сумма", keyboard_type=ft.KeyboardType.NUMBER,
-                                    border_color="#6C63FF")
+                                    border_color="#6C63FF", max_length=10)
         desc_field = ft.TextField(label="Описание (необязательно)", border_color="#6C63FF")
         date_field = ft.TextField(label="Дата", value=str(date.today()), border_color="#6C63FF")
 

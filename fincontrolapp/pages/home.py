@@ -88,9 +88,11 @@ class HomePage(BasePage):
     def _balance_card(self, balance, monthly):
         month_names = ["январь", "февраль", "март", "апрель", "май", "июнь",
                        "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
-        month_label = month_names[date.today().month - 1]
+        today = date.today()
+        month_label = f"{month_names[today.month - 1]} {today.year}"
+        monthly_net = (monthly['income'] or 0) - (monthly['expense'] or 0)
         return ft.Container(
-            height=171,
+            height=195,
             border_radius=24,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
             content=ft.Stack(
@@ -152,9 +154,8 @@ class HomePage(BasePage):
                                     ],
                                     spacing=8,
                                 ),
-                                ft.Text(f"За {month_label}", size=11, color="rgba(0,0,0,0.4)"),
                             ],
-                            spacing=8,
+                            spacing=7,
                         ),
                     ),
                 ],

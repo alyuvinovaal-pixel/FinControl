@@ -4,17 +4,39 @@ from components.base_page import BasePage
 from components.dialogs import show_dialog as _show_dialog, close_dialog as _close_dialog
 from db_queries import get_transactions, add_transaction, delete_transaction, get_categories
 
+
+MONTH_NAMES = [
+    "январь", "февраль", "март", "апрель", "май", "июнь",
+    "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+]
+
 class IncomePage(BasePage):
     def __init__(self, page: ft.Page):
         super().__init__(page, "Доходы")
 
     def build_body(self):
+        period = self._current_period_label()
         salary = self._get_salary()
         incomes = get_transactions(self._user_id, type_='income')
-        additional = [t for t in incomes if not t['is_recurring']]
+        monthly_incomes = [t for t in incomes if self._is_current_month(t['date'])]
+        additional = [t for t in monthly_incomes if not t['is_recurring']]
+        month_total = sum(t['amount'] for t in monthly_incomes)
 
         return ft.Column([
             self._salary_card(salary),
+            ft.Container(
+                bgcolor="#EEF3FF",
+                border_radius=10,
+                padding=ft.Padding.only(left=10, right=10, top=6, bottom=6),
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.CALENDAR_MONTH, size=14, color="#5B6EC7"),
+                        ft.Text(f"Период: {period}", size=12, color="#5B6EC7"),
+                        ft.Text(f"Сумма: {month_total:,.0f} ₽", size=12, color="#2E7D32"),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                ),
+            ),
             ft.Text("Дополнительные доходы", size=16, weight=ft.FontWeight.W_600, color="#1A1A24"),
             self._income_list(additional),
             ft.ElevatedButton(
@@ -24,6 +46,17 @@ class IncomePage(BasePage):
                 on_click=self._open_add_dialog,
             ),
         ], spacing=16)
+
+    def _is_current_month(self, value):
+        if not value:
+            return False
+        dt = str(value)
+        month_key = date.today().strftime("%Y-%m")
+        return dt.startswith(month_key)
+
+    def _current_period_label(self):
+        today = date.today()
+        return f"{MONTH_NAMES[today.month - 1]} {today.year}"
 
     def _get_salary(self):
         salaries = get_transactions(self._user_id, type_='income')
@@ -110,7 +143,7 @@ class IncomePage(BasePage):
 
     def _open_salary_dialog(self, e):
         amount_field = ft.TextField(label="Сумма зарплаты", keyboard_type=ft.KeyboardType.NUMBER,
-                                    border_color="#6C63FF")
+                                    border_color="#6C63FF", max_length=10)
         date_field = ft.TextField(label="Дата", value=str(date.today()), border_color="#6C63FF")
         cats = get_categories(type_='income')
         salary_cat = next((c for c in cats if c['name'] == 'Зарплата'), cats[0] if cats else None)
@@ -159,7 +192,7 @@ class IncomePage(BasePage):
             options=[ft.dropdown.Option(str(c['id']), c['name']) for c in cats],
         )
         amount_field = ft.TextField(label="Сумма", keyboard_type=ft.KeyboardType.NUMBER,
-                                    border_color="#6C63FF")
+                                    border_color="#6C63FF", max_length=10)
         desc_field = ft.TextField(label="Описание (необязательно)", border_color="#6C63FF")
         date_field = ft.TextField(label="Дата", value=str(date.today()), border_color="#6C63FF")
 
