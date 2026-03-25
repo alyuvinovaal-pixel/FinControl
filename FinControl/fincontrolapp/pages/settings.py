@@ -1,5 +1,6 @@
 import flet as ft
 from components.base_page import BasePage
+from components.dialogs import show_dialog as _show_dialog, close_dialog as _close_dialog
 
 
 class SettingsPage(BasePage):
@@ -8,16 +9,233 @@ class SettingsPage(BasePage):
 
     def build_body(self):
         return ft.Column([
-            self._setting_item(ft.Icons.PERSON_OUTLINE, "Профиль", "Настройте своё имя"),
-            self._setting_item(ft.Icons.NOTIFICATIONS_OUTLINED, "Уведомления", "Напоминания о расходах"),
-            self._setting_item(ft.Icons.CURRENCY_RUBLE, "Валюта", "Рубль (₽)"),
-            self._setting_item(ft.Icons.TELEGRAM, "Telegram-бот", "Подключить бота"),
-            self._setting_item(ft.Icons.DELETE_OUTLINE, "Сбросить данные", "Удалить всё", color="#F44336"),
+            self._setting_item(ft.Icons.PERSON_OUTLINE, "Профиль", "Настройте своё имя",
+                on_click=self._open_profile_dialog),
+            self._setting_item(ft.Icons.NOTIFICATIONS_OUTLINED, "Уведомления", "Напоминания о расходах",
+                on_click=self._open_notifications_dialog),
+            self._setting_item(ft.Icons.CURRENCY_RUBLE, "Валюта", "Рубль (₽)",
+                on_click=self._open_currency_dialog),
+            self._setting_item(ft.Icons.TELEGRAM, "Telegram-бот", "Подключить бота",
+                on_click=self._open_telegram_dialog),
+            self._setting_item(
+                ft.Icons.ACCOUNT_BALANCE_WALLET_OUTLINED, "Изменить баланс",
+                "Скорректировать текущий баланс",
+                on_click=lambda e: self.page_ref.data["show_balance_dialog"](),
+            ),
+            self._setting_item(
+                ft.Icons.DELETE_OUTLINE, "Сбросить данные",
+                "Удалить все транзакции, цели, подписки",
+                color="#F44336", on_click=self._confirm_reset,
+            ),
+            self._setting_item(
+                ft.Icons.NO_ACCOUNTS_OUTLINED, "Удалить аккаунт",
+                "Полностью удалить профиль и все данные",
+                color="#FF5252", on_click=self._confirm_delete_account,
+            ),
+            self._setting_item(
+                ft.Icons.LOGOUT, "Выйти из аккаунта", "Сменить пользователя",
+                color="#F44336", on_click=lambda e: self.page_ref.data["logout"](),
+            ),
         ], spacing=8)
 
-    def _setting_item(self, icon, title, subtitle, color="#FFFFFF"):
+    def _open_profile_dialog(self, e):
+        from database import get_connection
+        user_id = self._user_id
+        with get_connection() as conn:
+            user = conn.execute(
+                "SELECT username, email, phone FROM users WHERE id=?", (user_id,)
+            ).fetchone()
+
+        username_field = ft.TextField(
+            label="Имя пользователя",
+            value=user["username"] or "" if user else "",
+            border_color="#6C63FF",
+        )
+        contact_hint = (user["email"] or user["phone"] or "") if user else ""
+
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Профиль"))
+
+        def on_cancel(e):
+            _close_dialog(self.page_ref, dlg)
+
+        def on_submit(e):
+            try:
+                from database import get_connection as gc
+                with gc() as conn:
+                    conn.execute("UPDATE users SET username=? WHERE id=?",
+                                 (username_field.value.strip() or None, user_id))
+                self.page_ref.snack_bar = ft.SnackBar(ft.Text("Имя сохранено ✓"), open=True)
+                self.page_ref.update()
+            finally:
+                _close_dialog(self.page_ref, dlg)
+
+        dlg.content = ft.Column([
+            ft.Text(contact_hint, size=12, color="#888888") if contact_hint else ft.Container(),
+            username_field,
+        ], tight=True, spacing=12)
+        dlg.actions = [
+            ft.TextButton("Отмена", on_click=on_cancel),
+            ft.TextButton("Сохранить", on_click=on_submit),
+        ]
+        _show_dialog(self.page_ref, dlg)
+
+    def _open_notifications_dialog(self, e):
+        enabled = self.page_ref.data.get("_s_notifications", False)
+        switch = ft.Switch(label="Напоминания о расходах", value=enabled, active_color="#6C63FF")
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Уведомления"))
+
+        def on_cancel(e):
+            _close_dialog(self.page_ref, dlg)
+
+        def on_submit(e):
+            try:
+                self.page_ref.data["_s_notifications"] = switch.value
+                msg = "Уведомления включены ✓" if switch.value else "Уведомления выключены"
+                self.page_ref.snack_bar = ft.SnackBar(ft.Text(msg), open=True)
+                self.page_ref.update()
+            finally:
+                _close_dialog(self.page_ref, dlg)
+
+        dlg.content = ft.Column([
+            ft.Text("Push-уведомления работают после сборки на устройстве.",
+                    size=12, color="#888888"),
+            switch,
+        ], tight=True, spacing=12)
+        dlg.actions = [
+            ft.TextButton("Отмена", on_click=on_cancel),
+            ft.TextButton("Сохранить", on_click=on_submit),
+        ]
+        _show_dialog(self.page_ref, dlg)
+
+    def _open_currency_dialog(self, e):
+        currencies = [
+            ("RUB", "₽  Российский рубль"),
+            ("USD", "$  Доллар США"),
+            ("EUR", "€  Евро"),
+            ("KZT", "₸  Казахстанский тенге"),
+            ("BYN", "Br  Белорусский рубль"),
+        ]
+        current = self.page_ref.data.get("_s_currency", "RUB")
+        dd = ft.Dropdown(
+            label="Валюта", value=current, border_color="#6C63FF",
+            options=[ft.dropdown.Option(code, label) for code, label in currencies],
+        )
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Валюта"))
+
+        def on_cancel(e):
+            _close_dialog(self.page_ref, dlg)
+
+        def on_submit(e):
+            try:
+                self.page_ref.data["_s_currency"] = dd.value
+                self.page_ref.snack_bar = ft.SnackBar(ft.Text("Валюта сохранена ✓"), open=True)
+                self.page_ref.update()
+            finally:
+                _close_dialog(self.page_ref, dlg)
+
+        dlg.content = ft.Column([dd], tight=True)
+        dlg.actions = [
+            ft.TextButton("Отмена", on_click=on_cancel),
+            ft.TextButton("Сохранить", on_click=on_submit),
+        ]
+        _show_dialog(self.page_ref, dlg)
+
+    def _open_telegram_dialog(self, e):
+        import webbrowser
+        bot_username = "FinControlBot"
+        user_id = self._user_id
+        deep_link = f"https://t.me/f1nc0ntr0l_bot#"
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Telegram-бот"))
+
+        def on_cancel(e):
+            _close_dialog(self.page_ref, dlg)
+
+        def on_open(e):
+            try:
+                webbrowser.open(deep_link)
+            finally:
+                _close_dialog(self.page_ref, dlg)
+
+        dlg.content = ft.Column([
+            ft.Text("Открой бота и нажми /start — он привяжется к твоему аккаунту.",
+                    size=13, color="#CCCCCC"),
+            ft.Container(
+                bgcolor="#2A2A35", border_radius=10,
+                padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                content=ft.Text(f"@{bot_username}", size=14, color="#29B6F6",
+                                weight=ft.FontWeight.W_600),
+            ),
+        ], tight=True, spacing=12)
+        dlg.actions = [
+            ft.TextButton("Отмена", on_click=on_cancel),
+            ft.TextButton("Открыть Telegram", on_click=on_open),
+        ]
+        _show_dialog(self.page_ref, dlg)
+
+    def _confirm_reset(self, e):
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Сбросить данные?"))
+
+        def on_cancel(e):
+            _close_dialog(self.page_ref, dlg)
+
+        def on_confirm(e):
+            try:
+                from database import get_connection
+                with get_connection() as conn:
+                    conn.execute("DELETE FROM transactions")
+                    conn.execute("DELETE FROM goals")
+                    conn.execute("DELETE FROM subscriptions")
+                self.page_ref.snack_bar = ft.SnackBar(ft.Text("Данные удалены"), open=True)
+                self.page_ref.update()
+            finally:
+                _close_dialog(self.page_ref, dlg)
+
+        dlg.content = ft.Text("Все транзакции, цели и подписки будут удалены. Отменить нельзя.")
+        dlg.actions = [
+            ft.TextButton("Отмена", on_click=on_cancel),
+            ft.TextButton("Удалить", style=ft.ButtonStyle(color="#F44336"), on_click=on_confirm),
+        ]
+        _show_dialog(self.page_ref, dlg)
+
+    def _confirm_delete_account(self, e):
+        user_id = self._user_id
+        dlg = ft.AlertDialog(modal=True, title=ft.Text("Удалить аккаунт?"))
+
+        def on_cancel(e):
+            _close_dialog(self.page_ref, dlg)
+
+        def on_confirm(e):
+            try:
+                from database import get_connection
+                with get_connection() as conn:
+                    conn.execute("DELETE FROM transactions WHERE user_id=?", (user_id,))
+                    conn.execute("DELETE FROM goals WHERE user_id=?", (user_id,))
+                    conn.execute("DELETE FROM subscriptions WHERE user_id=?", (user_id,))
+                    conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+
+                self.page_ref.snack_bar = ft.SnackBar(ft.Text("Аккаунт удален"), open=True)
+                self.page_ref.update()
+                self.page_ref.data["logout"]()
+            finally:
+                _close_dialog(self.page_ref, dlg)
+
+        dlg.content = ft.Text(
+            "Профиль, транзакции, цели и подписки будут удалены без возможности восстановления."
+        )
+        dlg.actions = [
+            ft.TextButton("Отмена", on_click=on_cancel),
+            ft.TextButton(
+                "Удалить аккаунт",
+                style=ft.ButtonStyle(color="#FF5252"),
+                on_click=on_confirm,
+            ),
+        ]
+        _show_dialog(self.page_ref, dlg)
+
+    def _setting_item(self, icon, title, subtitle, color="#FFFFFF", on_click=None):
         return ft.Container(
             bgcolor="#1A1A24", border_radius=12, padding=16, ink=True,
+            on_click=on_click,
             content=ft.Row([
                 ft.Icon(icon, color=color, size=24),
                 ft.Column([

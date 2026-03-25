@@ -98,3 +98,15 @@ class BasePage(ft.Container):
             ft.Control: любой виджет Flet (Column, ListView, Stack и т.д.)
         """
         return ft.Container()
+
+    @property
+    def _user_id(self):
+        return self.page_ref.data.get("user_id")
+
+    def refresh(self):
+        """Перестраивает тело страницы и обновляет UI."""
+        self.content.controls[1] = self.build_body()
+        try:
+            self.update()
+        except RuntimeError:
+            pass

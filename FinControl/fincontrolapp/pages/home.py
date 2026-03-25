@@ -1,30 +1,35 @@
-"""
-home.py — Главный экран приложения FinControl.
-
-Показывает:
-- Карточку с общим балансом (доходы и расходы суммарно)
-- Блок быстрых действий (кнопки-ярлыки для частых операций)
-- Список последних операций
-
-TODO: подключить реальные данные из БД вместо заглушек "0 ₽".
-"""
-
 import flet as ft
+import os
+from datetime import date
 from components.base_page import BasePage
+from db_queries import get_balance, get_monthly_balance, get_transactions
+
+
+def _find_graph_asset_src() -> str | None:
+    candidates = [
+        "analytics/graphs.svg",
+        "analytics/graph.svg",
+        "home/graphs.svg",
+        "home/graph.svg",
+        "graphs.svg",
+        "graph.svg",
+    ]
+    assets_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+    for src in candidates:
+        if os.path.exists(os.path.join(assets_root, src)):
+            return src
+    return None
+
+
+GRAPH_ASSET_SRC = _find_graph_asset_src()
 
 
 class HomePage(BasePage):
-    """Главный экран — дашборд с балансом и быстрыми действиями."""
 
     def __init__(self, page: ft.Page):
-        """
-        Параметры:
-            page (ft.Page): объект страницы Flet, передаётся из main.py.
-        """
         super().__init__(page, "Главная")
 
     def build_header(self):
-        """Переопределяем заголовок страницы (AppBar)"""
         return ft.AppBar(
             title=ft.Text(
                 "Главная",
@@ -38,88 +43,52 @@ class HomePage(BasePage):
         )
 
     def build_body(self):
-        """
-        Строит тело главного экрана.
+        today = date.today()
+        balance = get_balance(self._user_id)
+        monthly = get_monthly_balance(self._user_id, today.year, today.month)
+        transactions = get_transactions(self._user_id, limit=5)
 
-        Структура (сверху вниз):
-            1. Карточка баланса — SVG-фон из Figma + контент поверх через ft.Stack.
-            2. Быстрые действия — 4 кнопки для перехода к основным разделам.
-            3. Последние операции — список транзакций (пока заглушка).
+        controls = [
+            self._balance_card(balance, monthly),
+            ft.Text(
+                "Быстрые действия",
+                size=20,
+                font_family="Montserrat Semibold",
+                color="#000000",
+            ),
+            ft.Row(
+                controls=[
+                    self._quick_action_icon(ft.Icons.ADD_CIRCLE_OUTLINE,     "Доходы",  "#000000", lambda e: self.page_ref.data["navigate"](5)),
+                    self._quick_action_icon(ft.Icons.REMOVE_CIRCLE_OUTLINE,  "Расходы", "#000000", lambda e: self.page_ref.data["navigate"](6)),
+                    self._quick_action_icon(ft.Icons.STAR_OUTLINE,           "Цель",    "#000000", lambda e: self.page_ref.data["navigate"](2)),
+                    self._quick_action_icon(ft.Icons.SUBSCRIPTIONS_OUTLINED, "Подписки","#000000", lambda e: self.page_ref.data["navigate"](4)),
+                ],
+                spacing=12,
+            ),
+        ]
 
-        Возвращает:
-            ft.Column: прокручиваемая колонка со всеми секциями.
-        """
-        return ft.Column(
-            controls=[
-                # Карточка баланса — SVG фон + контент через Stack
-                self._balance_card(),
+        if GRAPH_ASSET_SRC:
+            controls.extend([
+                ft.Text("Графики", size=20, font_family="Montserrat Semibold", color="#000000"),
+                self._graph_svg_preview(),
+            ])
 
-                # Быстрые действия
-                ft.Text(
-                    "Быстрые действия",
-                    size=20,
-                    font_family="Montserrat Semibold",
-                    color="#000000",
-                ),
-                ft.Row(
-                    controls=[
-                        self._quick_action_icon(
-                            ft.Icons.ADD_CIRCLE_OUTLINE,
-                            "Доходы",
-                            "#000000",
-                            lambda e: self.page_ref.data["navigate"](1),
-                        ),
-                        self._quick_action_icon(
-                            ft.Icons.REMOVE_CIRCLE_OUTLINE,
-                            "Расходы",
-                            "#000000",
-                            lambda e: self.page_ref.data["navigate"](1),
-                        ),
-                        self._quick_action_icon(
-                            ft.Icons.STAR_OUTLINE,
-                            "Цель",
-                            "#000000",
-                            lambda e: self.page_ref.data["navigate"](2),
-                        ),
-                        self._quick_action_icon(
-                            ft.Icons.SUBSCRIPTIONS_OUTLINED,
-                            "Подписки",
-                            "#000000",
-                            lambda e: self.page_ref.data["navigate"](4),
-                        ),
-                    ],
-                    spacing=12,
-                ),
+        controls.extend([
+            ft.Text(
+                "Последние операции",
+                size=20,
+                font_family="Montserrat Semibold",
+                color="#000000",
+            ),
+            self._transactions_list(transactions),
+        ])
 
-                # Последние операции
-                ft.Text(
-                    "Последние операции",
-                    size=20,
-                    font_family="Montserrat Semibold",
-                    color="#000000",
-                ),
-                ft.Container(
-                    height=80,
-                    expand=True,
-                    border_radius=16,
-                    gradient=ft.LinearGradient(
-                        colors=["#ffffff", "#88A2FF"],
-                        begin=ft.Alignment(-1, -1),
-                        end=ft.Alignment(1, 1),
-                    ),
-                    alignment=ft.Alignment(0, 0),
-                    content=ft.Text(
-                        "Операций пока нет",
-                        color="#000000",
-                        font_family="Montserrat Semibold",
-                        size=14,
-                    ),
-                ),
-            ],
-            spacing=20,
-        )
+        return ft.Column(controls=controls, spacing=20)
 
-    def _balance_card(self):
+    def _balance_card(self, balance, monthly):
+        month_names = ["январь", "февраль", "март", "апрель", "май", "июнь",
+                       "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
+        month_label = month_names[date.today().month - 1]
         return ft.Container(
             height=171,
             border_radius=24,
@@ -127,11 +96,7 @@ class HomePage(BasePage):
             content=ft.Stack(
                 expand=True,
                 controls=[
-                    ft.Image(
-                        src="home/card_bg.svg",
-                        fit="fill",
-                        expand=True,
-                    ),
+                    ft.Image(src="home/card_bg.svg", fit="fill", expand=True),
                     ft.Container(
                         padding=24,
                         content=ft.Column(
@@ -143,7 +108,7 @@ class HomePage(BasePage):
                                     color="rgba(0,0,0,0.3)",
                                 ),
                                 ft.Text(
-                                    "0 ₽",
+                                    f"{balance['balance']:,.0f} ₽",
                                     font_family="Montserrat Semibold",
                                     size=36,
                                     color="#000000",
@@ -153,18 +118,12 @@ class HomePage(BasePage):
                                         ft.Container(
                                             bgcolor="#E3FC87",
                                             border_radius=16,
-                                            padding=ft.Padding(
-                                                left=12, right=12, top=8, bottom=8
-                                            ),
+                                            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                                             content=ft.Row(
                                                 controls=[
-                                                    ft.Icon(
-                                                        ft.Icons.ARROW_UPWARD,
-                                                        color="#2A4A00",
-                                                        size=16,
-                                                    ),
+                                                    ft.Icon(ft.Icons.ARROW_UPWARD, color="#2A4A00", size=16),
                                                     ft.Text(
-                                                        "Доходы: 0 ₽",
+                                                        f"Доходы: {monthly['income']:,.0f} ₽",
                                                         font_family="Montserrat Semibold",
                                                         color="#2A4A00",
                                                         size=14,
@@ -176,18 +135,12 @@ class HomePage(BasePage):
                                         ft.Container(
                                             bgcolor="#FFEC60",
                                             border_radius=16,
-                                            padding=ft.Padding(
-                                                left=12, right=12, top=8, bottom=8
-                                            ),
+                                            padding=ft.Padding(left=12, right=12, top=8, bottom=8),
                                             content=ft.Row(
                                                 controls=[
-                                                    ft.Icon(
-                                                        ft.Icons.ARROW_DOWNWARD,
-                                                        color="#4A3A00",
-                                                        size=16,
-                                                    ),
+                                                    ft.Icon(ft.Icons.ARROW_DOWNWARD, color="#4A3A00", size=16),
                                                     ft.Text(
-                                                        "Расходы: 0 ₽",
+                                                        f"Расходы: {monthly['expense']:,.0f} ₽",
                                                         font_family="Montserrat Semibold",
                                                         color="#4A3A00",
                                                         size=14,
@@ -199,6 +152,7 @@ class HomePage(BasePage):
                                     ],
                                     spacing=8,
                                 ),
+                                ft.Text(f"За {month_label}", size=11, color="rgba(0,0,0,0.4)"),
                             ],
                             spacing=8,
                         ),
@@ -207,19 +161,89 @@ class HomePage(BasePage):
             ),
         )
 
+    def _graph_svg_preview(self):
+        return ft.Container(
+            height=180,
+            border_radius=16,
+            gradient=ft.LinearGradient(
+                colors=["#ffffff", "#88A2FF"],
+                begin=ft.Alignment(-1, -1),
+                end=ft.Alignment(1, 1),
+            ),
+            padding=12,
+            content=ft.Image(src=GRAPH_ASSET_SRC, fit=ft.ImageFit.CONTAIN, expand=True),
+        )
+
+    def _transactions_list(self, transactions):
+        if not transactions:
+            return ft.Container(
+                height=80,
+                expand=True,
+                border_radius=16,
+                gradient=ft.LinearGradient(
+                    colors=["#ffffff", "#88A2FF"],
+                    begin=ft.Alignment(-1, -1),
+                    end=ft.Alignment(1, 1),
+                ),
+                alignment=ft.Alignment(0, 0),
+                content=ft.Text(
+                    "Операций пока нет",
+                    color="#000000",
+                    font_family="Montserrat Semibold",
+                    size=14,
+                ),
+            )
+
+        rows = []
+        for t in transactions:
+            is_income = t['type'] == 'income'
+            rows.append(
+                ft.Container(
+                    padding=ft.Padding(left=0, right=0, top=10, bottom=10),
+                    border=ft.Border(bottom=ft.BorderSide(1, "#E0E0E0")),
+                    content=ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Row([
+                                ft.Container(
+                                    width=36, height=36,
+                                    border_radius=18,
+                                    bgcolor="#4CAF5022" if is_income else "#F4433622",
+                                    content=ft.Icon(
+                                        ft.Icons.ARROW_UPWARD if is_income else ft.Icons.ARROW_DOWNWARD,
+                                        color="#4CAF50" if is_income else "#F44336",
+                                        size=18,
+                                    ),
+                                    alignment=ft.Alignment(0, 0),
+                                ),
+                                ft.Column([
+                                    ft.Text(t['category_name'], size=14, color="#1A1A24", weight=ft.FontWeight.W_500),
+                                    ft.Text(t['description'] or t['date'], size=12, color="#888888"),
+                                ], spacing=2),
+                            ], spacing=12),
+                            ft.Text(
+                                f"{'+ ' if is_income else '− '}{t['amount']:,.0f} ₽",
+                                color="#4CAF50" if is_income else "#F44336",
+                                size=14,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                        ],
+                    ),
+                )
+            )
+
+        return ft.Container(
+            border_radius=16,
+            gradient=ft.LinearGradient(
+                colors=["#ffffff", "#88A2FF"],
+                begin=ft.Alignment(-1, -1),
+                end=ft.Alignment(1, 1),
+            ),
+            padding=ft.Padding(left=16, right=16, top=4, bottom=4),
+            content=ft.Column(rows, spacing=0),
+        )
+
     def _quick_action_icon(self, icon, label, color, on_click=None):
-        """
-        Создаёт кнопку быстрого действия с Material Icon.
-
-        Параметры:
-            icon  (ft.Icons): иконка из библиотеки Material Icons.
-            label (str):      подпись под иконкой (обрезается если не влезает).
-            color (str):      цвет иконки и фона кружка в формате HEX.
-
-        Возвращает:
-            ft.Container: карточка 78×~80px с иконкой и подписью,
-                          реагирует на нажатие (ink=True).
-        """
         return ft.Container(
             border_radius=18,
             padding=10,
@@ -227,8 +251,8 @@ class HomePage(BasePage):
             on_click=on_click,
             gradient=ft.LinearGradient(
                 colors=["#ffffff", "#88A2FF"],
-                begin=ft.Alignment(-1, -1),  # top-left
-                end=ft.Alignment(1, 1),      # bottom-right
+                begin=ft.Alignment(-1, -1),
+                end=ft.Alignment(1, 1),
             ),
             content=ft.Column(
                 controls=[
@@ -236,7 +260,7 @@ class HomePage(BasePage):
                         width=44,
                         height=44,
                         border_radius=14,
-                        bgcolor=color + "33",  # цвет с прозрачностью ~13%
+                        bgcolor=color + "33",
                         content=ft.Icon(icon, color=color, size=26),
                         alignment=ft.Alignment(0, 0),
                     ),
