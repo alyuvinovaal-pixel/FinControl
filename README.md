@@ -1,15 +1,28 @@
 # FinControl — flet-app
-
 > Ветка с реализацией мобильного приложения на Python + Flet
 
 ## Запуск
-
 ```bash
-git clone https://github.com/your-org/fincontrol.git
-cd fincontrol
-git checkout flet-app
+git clone https://github.com/Dmitry-mironov4/FinControl.git
+cd FinControl
 
-pip install flet
-python main.py
+uv sync
+
+### Desktop
+uv run python main.py
+
+### iOS (Нужен Flet)
+uv run flet run --ios
+
+### Android (Нужен Flet)
+uv run flet run --android
 ```
 
+## Требования
+
+| Инструмент | Версия |
+|---|---|
+| Python | 3.11+ |
+| uv | 0.4+ |
+| flet | 0.21+ |
+| Flutter | для мобильной сборки |
