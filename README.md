@@ -12,10 +12,10 @@ uv sync
 uv run python main.py
 
 ### iOS (Нужен Flet)
-uv run flet run --ios
+uv run flet run --ios main.py
 
 ### Android (Нужен Flet)
-uv run flet run --android
+uv run flet run --android main.py
 ```
 
 ## Требования
