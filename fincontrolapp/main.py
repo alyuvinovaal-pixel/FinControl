@@ -91,8 +91,7 @@ def main(page: ft.Page):
 
     def _show_initial_balance_dialog(user_id: int):
         from datetime import date
-        from db_queries import add_transaction
-
+        
         amount_field = ft.TextField(
             label="Сумма на счёте",
             keyboard_type=ft.KeyboardType.NUMBER,
@@ -122,15 +121,35 @@ def main(page: ft.Page):
                     cat = conn.execute(
                         "SELECT id FROM categories WHERE name='Начальный баланс'"
                     ).fetchone()
-                if cat:
-                    add_transaction(
-                        user_id=user_id,
-                        type_='income',
-                        amount=amount,
-                        category_id=cat['id'],
-                        description="Начальный баланс",
-                        date=str(date.today()),
-                    )
+                    if not cat:
+                        return 
+                    
+                    # LIMIT 1 нужен, чтобы не создавать дубликаты при повторном открытии диалога
+                    existing = conn.execute(
+                        """
+                        SELECT id FROM transactions
+                        WHERE user_id=? 
+                            AND category_id=? 
+                        LIMIT 1 
+                        """, 
+                        (user_id, cat['id']),
+                    ).fetchone()
+                    if existing:
+                        conn.execute(
+                            """UPDATE transactions 
+                            SET amount=?, date=? 
+                            WHERE id=?
+                            """,
+                            (amount, str(date.today()), existing['id']),
+                        )
+                    else:
+                        conn.execute(
+                            """
+                            INSERT INTO transactions (user_id, type, amount, category_id, description, date)
+                            VALUES (?, 'income', ?, ?, 'Начальный баланс', ?)
+                            """,
+                            (user_id, amount, cat['id'], str(date.today())),
+                        )
             except ValueError:
                 page.snack_bar = ft.SnackBar(ft.Text("Введите корректную сумму"), open=True)
                 page.update()

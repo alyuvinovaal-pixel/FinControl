@@ -86,11 +86,6 @@ class HomePage(BasePage):
         return ft.Column(controls=controls, spacing=20)
 
     def _balance_card(self, balance, monthly):
-        month_names = ["январь", "февраль", "март", "апрель", "май", "июнь",
-                       "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
-        today = date.today()
-        month_label = f"{month_names[today.month - 1]} {today.year}"
-        monthly_net = (monthly['income'] or 0) - (monthly['expense'] or 0)
         return ft.Container(
             height=195,
             border_radius=24,
