@@ -18,7 +18,12 @@ BasePage определяет скелет экрана (заголовок + т
 """
 
 import flet as ft
+from datetime import date
 
+MONTH_NAMES = [
+    "январь", "февраль", "март", "апрель", "май", "июнь",
+    "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+]
 
 class BasePage(ft.Container):
     """
@@ -110,3 +115,12 @@ class BasePage(ft.Container):
             self.update()
         except RuntimeError:
             pass
+
+    def _is_current_month(self, value):
+        if not value:
+            return False
+        return str(value).startswith(date.today().strftime("%Y-%m"))
+
+    def _current_period_label(self):
+        today = date.today()
+        return f"{MONTH_NAMES[today.month - 1]} {today.year}"

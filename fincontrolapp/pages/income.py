@@ -1,14 +1,14 @@
 import flet as ft
-from datetime import date, datetime
+from datetime import date
+from database import get_connection
 from components.base_page import BasePage
+from components.form_utils import parse_amount, parse_date
 from components.dialogs import show_dialog as _show_dialog, close_dialog as _close_dialog
-from db_queries import get_transactions, add_transaction, delete_transaction, get_categories, update_transaction
+from modules.categories.repository import CategoryRepository
+from modules.categories.service import CategoryService
+from modules.transactions.repository import TransactionRepository
+from modules.transactions.service import TransactionService
 
-
-MONTH_NAMES = [
-    "январь", "февраль", "март", "апрель", "май", "июнь",
-    "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
-]
 
 class IncomePage(BasePage):
     def __init__(self, page: ft.Page):
@@ -17,8 +17,12 @@ class IncomePage(BasePage):
     def build_body(self):
         period = self._current_period_label()
         salary = self._get_salary()
-        incomes = get_transactions(self._user_id, type_='income')
-        monthly_incomes = [t for t in incomes if self._is_current_month(t['date'])]
+
+        with get_connection() as con:
+            repo = TransactionRepository(con)
+            service = TransactionService(repo)
+            incomes_all = service.get_transactions(self._user_id, type_="income")
+        monthly_incomes = [t for t in incomes_all if self._is_current_month(t['date'])]
         additional = [t for t in monthly_incomes if not t['is_recurring']]
         month_total = sum(t['amount'] for t in monthly_incomes)
 
@@ -47,19 +51,11 @@ class IncomePage(BasePage):
             ),
         ], spacing=16)
 
-    def _is_current_month(self, value):
-        if not value:
-            return False
-        dt = str(value)
-        month_key = date.today().strftime("%Y-%m")
-        return dt.startswith(month_key)
-
-    def _current_period_label(self):
-        today = date.today()
-        return f"{MONTH_NAMES[today.month - 1]} {today.year}"
-
     def _get_salary(self):
-        salaries = get_transactions(self._user_id, type_='income')
+        with get_connection() as conn:
+            repo = TransactionRepository(conn)
+            service = TransactionService(repo)
+            salaries = service.get_transactions(self._user_id, type_='income')
         recurring = [t for t in salaries if t['is_recurring']]
         return recurring[0] if recurring else None
 
@@ -129,7 +125,10 @@ class IncomePage(BasePage):
 
         def on_confirm(e):
             try:
-                delete_transaction(transaction_id)
+                with get_connection() as conn:
+                    repo = TransactionRepository(conn)
+                    service = TransactionService(repo)
+                    service.delete_transaction(transaction_id)
                 self.refresh()
             finally:
                 _close_dialog(self.page_ref, dlg)
@@ -145,8 +144,11 @@ class IncomePage(BasePage):
         amount_field = ft.TextField(label="Сумма зарплаты", keyboard_type=ft.KeyboardType.NUMBER,
                                     border_color="#6C63FF", max_length=10)
         date_field = ft.TextField(label="Дата", value=str(date.today().strftime("%d.%m.%Y")), border_color="#6C63FF")
-        cats = get_categories(type_='income')
-        salary_cat = next((c for c in cats if c['name'] == 'Зарплата'), cats[0] if cats else None)
+        with get_connection() as conn:
+            repo = CategoryRepository(conn)
+            service = CategoryService(repo)
+            cats = service.get_all(type_='income')
+        salary_cat = next((c for c in cats if c.name == 'Зарплата'), cats[0] if cats else None)
 
         dlg = ft.AlertDialog(modal=True, title=ft.Text("Указать зарплату"))
 
@@ -154,38 +156,41 @@ class IncomePage(BasePage):
             _close_dialog(self.page_ref, dlg)
 
         def on_submit(e):
-            if not amount_field.value or not salary_cat:
-                return
             try:
-                amount = float(amount_field.value.replace(",", "."))
-            except ValueError:
-                self.page_ref.show_dialog(ft.SnackBar(ft.Text("Введите корректную сумму")))
-                return              
-            try:
-                parsed_date = datetime.strptime(date_field.value, "%d.%m.%Y").date()
-            except ValueError:
-                self.page_ref.show_dialog(ft.SnackBar(ft.Text("Введите корректную дату в формате ДД.ММ.ГГГГ")))
-                return 
-            existing = self._get_salary()
-            if existing:
-                update_transaction(existing['id'], amount, str(parsed_date))
-            else:
-                add_transaction(
-                    user_id=self._user_id,
-                    type_='income',
-                    amount=amount,
-                    category_id=salary_cat['id'],
-                    description="Зарплата",
-                    date=str(parsed_date),
-                    is_recurring=1,
-                )
-            # refresh + snackbar — одинаково для обоих случаев
-            self.refresh()
-            pages = self.page_ref.data.get("pages", {})
-            if 0 in pages:
-                pages[0].refresh()
-            _close_dialog(self.page_ref, dlg)
-            self.page_ref.show_dialog(ft.SnackBar(ft.Text("Зарплата сохранена")))
+                if not amount_field.value or not salary_cat:
+                    return
+                amount = parse_amount(amount_field.value)
+                parsed_date = parse_date(date_field.value)
+                existing = self._get_salary()
+                if existing:
+                    with get_connection() as conn:
+                        repo = TransactionRepository(conn)
+                        service = TransactionService(repo)
+                        service.update_transaction(existing['id'], amount, str(parsed_date))
+                else:
+                    with get_connection() as conn:
+                        repo = TransactionRepository(conn)
+                        service = TransactionService(repo)
+                        service.add_transaction(
+                            user_id=self._user_id,
+                            type_='income',
+                            amount=amount,
+                            category_id=salary_cat.id,
+                            description="Зарплата",
+                            date=str(parsed_date),
+                            is_recurring=1,
+                        )
+                self.refresh()
+                pages = self.page_ref.data.get("pages", {})
+                if 0 in pages:
+                    pages[0].refresh()
+                _close_dialog(self.page_ref, dlg)
+                self.page_ref.show_dialog(ft.SnackBar(ft.Text("Зарплата сохранена")))
+                self.page_ref.update()
+            except ValueError as e:
+                _close_dialog(self.page_ref, dlg)
+                self.page_ref.show_dialog(ft.SnackBar(ft.Text(str(e))))
+
 
         dlg.content = ft.Column([amount_field, date_field], tight=True, spacing=12)
         dlg.actions = [
@@ -195,10 +200,14 @@ class IncomePage(BasePage):
         _show_dialog(self.page_ref, dlg)
 
     def _open_add_dialog(self, e):
-        cats = get_categories(type_='income')
+        with get_connection() as conn:
+            repo = CategoryRepository(conn)
+            service = CategoryService(repo)
+            cats = service.get_all(type_='income')
+
         category_dd = ft.Dropdown(
             label="Категория", border_color="#6C63FF",
-            options=[ft.dropdown.Option(str(c['id']), c['name']) for c in cats],
+            options=[ft.dropdown.Option(str(c.id), c.name) for c in cats],
         )
         amount_field = ft.TextField(label="Сумма", keyboard_type=ft.KeyboardType.NUMBER,
                                     border_color="#6C63FF", max_length=10)
@@ -211,35 +220,32 @@ class IncomePage(BasePage):
             _close_dialog(self.page_ref, dlg)
 
         def on_submit(e):
-            if not amount_field.value or not category_dd.value:
-                return
             try:
-                amount = float(amount_field.value.replace(",", "."))
-            except ValueError:
-                self.page_ref.show_dialog(ft.SnackBar(ft.Text("Введите корректную сумму")))
-
-                return
-            
-            try:
-                parsed_date = datetime.strptime(date_field.value, "%d.%m.%Y").date()
-            except ValueError:
-                self.page_ref.show_dialog(ft.SnackBar(ft.Text("Введите корректную дату в формате ДД.ММ.ГГГГ"))) 
-                return
-            add_transaction(
-                user_id=self._user_id,
-                type_='income',
-                amount=amount,
-                category_id=int(category_dd.value),
-                description=desc_field.value or None,
-                date=str(parsed_date),
-            )
-            self.refresh()
-            pages = self.page_ref.data.get("pages", {})
-            if 0 in pages:
-                pages[0].refresh()
-            self.page_ref.show_dialog(ft.SnackBar(ft.Text("Доход добавлен")))   
-            _close_dialog(self.page_ref, dlg)
-
+                if not amount_field.value or not category_dd.value:
+                    return
+                amount = parse_amount(amount_field.value)
+                parsed_date = parse_date(date_field.value)
+                with get_connection() as conn:
+                    repo = TransactionRepository(conn)
+                    service = TransactionService(repo)
+                    service.add_transaction(
+                        user_id=self._user_id,
+                        type_='income',
+                        amount=amount,
+                        category_id=int(category_dd.value),
+                        description=desc_field.value or None,
+                        date=str(parsed_date),
+                    )
+                self.refresh()
+                pages = self.page_ref.data.get("pages", {})
+                if 0 in pages:
+                    pages[0].refresh()
+                _close_dialog(self.page_ref, dlg)
+                self.page_ref.show_dialog(ft.SnackBar(ft.Text("Доход добавлен")))
+                self.page_ref.update()
+            except ValueError as e:
+                _close_dialog(self.page_ref, dlg)
+                self.page_ref.show_dialog(ft.SnackBar(ft.Text(str(e))))
         dlg.content = ft.Column(
             [category_dd, amount_field, desc_field, date_field],
             tight=True, spacing=12,
