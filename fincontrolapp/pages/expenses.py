@@ -223,10 +223,10 @@ class ExpensesPage(BasePage):
                         description=desc_field.value or None,
                         date=str(parsed_date),
                     )
-                self.refresh()
+                self.rebuild()
                 pages = self.page_ref.data.get("pages", {})
                 if 0 in pages:
-                    pages[0].refresh()
+                    pages[0].rebuild()
                 _close_dialog(self.page_ref, dlg)
                 self.page_ref.show_dialog(ft.SnackBar(ft.Text("Расход добавлен")))
                 self.page_ref.update()

@@ -212,10 +212,10 @@ class GoalsPage(BasePage):
                     repo = GoalRepository(con)
                     service = GoalService(repo)
                     service.deposit_to_goal(self._user_id, goal_id, amount)
-                self.refresh()
+                self.rebuild()
                 pages = self.page_ref.data.get("pages", {})
                 if 0 in pages:
-                    pages[0].refresh()
+                    pages[0].rebuild()
                 self.page_ref.snack_bar = ft.SnackBar(
                     ft.Text(f"Пополнено на {amount:,.0f} ₽"), open=True
                 )

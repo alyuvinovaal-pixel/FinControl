@@ -108,9 +108,13 @@ class BasePage(ft.Container):
     def _user_id(self):
         return self.page_ref.data.get("user_id")
 
+    def rebuild(self):
+        """Перестраивает тело страницы без вызова update."""
+        self.content.controls[1] = self.build_body()
+
     def refresh(self):
         """Перестраивает тело страницы и обновляет UI."""
-        self.content.controls[1] = self.build_body()
+        self.rebuild()
         try:
             self.update()
         except RuntimeError:
