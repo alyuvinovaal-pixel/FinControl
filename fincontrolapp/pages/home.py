@@ -39,7 +39,7 @@ class HomePage(BasePage):
             center_title=False,
             bgcolor=ft.Colors.TRANSPARENT,
             elevation=0,
-            toolbar_height=30,
+            toolbar_height=50,
         )
 
     def build_body(self):
@@ -203,23 +203,23 @@ class HomePage(BasePage):
                                 ft.Container(
                                     width=36, height=36,
                                     border_radius=18,
-                                    bgcolor="#4CAF5022" if is_income else "#F4433622",
+                                    bgcolor=ft.Colors.with_opacity(0.6,"#FFFFFF") if is_income else ft.Colors.with_opacity(0.6,"#FFFFFF"),
                                     content=ft.Icon(
                                         ft.Icons.ARROW_UPWARD if is_income else ft.Icons.ARROW_DOWNWARD,
-                                        color="#4CAF50" if is_income else "#F44336",
+                                        color="#253A82" if is_income else ft.Colors.with_opacity(0.6,"#FF7E1C"),
                                         size=18,
                                     ),
                                     alignment=ft.Alignment(0, 0),
                                 ),
                                 ft.Column([
-                                    ft.Text(t['category_name'], size=14, color="#1A1A24", weight=ft.FontWeight.W_500),
-                                    ft.Text(t['description'] or t['date'], size=12, color="#888888"),
+                                    ft.Text(t['category_name'], size=15, color="#253A82", weight=ft.FontWeight.W_500,font_family="Montserrat SemiBold"),
+                                    ft.Text(t['description'] or t['date'], size=13, color=ft.Colors.with_opacity(0.6,"#253A82"),font_family="Montserrat SemiBold"),
                                 ], spacing=2),
                             ], spacing=12),
                             ft.Text(
                                 f"{'+ ' if is_income else '− '}{t['amount']:,.0f} ₽",
-                                color="#4CAF50" if is_income else "#F44336",
-                                size=14,
+                                color="#253A82" if is_income else ft.Colors.with_opacity(0.6,"#FF7E1C"),
+                                size=15, font_family="Montserrat SemiBold",
                                 weight=ft.FontWeight.W_600,
                             ),
                         ],
