@@ -389,10 +389,11 @@ class SubscriptionsPage(BasePage):
             self.page_ref.update()
 
         bs.content = ft.Container(
-            padding=ft.Padding.only(left=20, right=20, top=24, bottom=32),
+            padding=ft.Padding.only(left=20, right=20, top=16, bottom=16),
             content=ft.Column(
                 tight=True,
-                spacing=16,
+                spacing=8,
+                scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,

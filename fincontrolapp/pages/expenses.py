@@ -297,17 +297,17 @@ class ExpensesPage(BasePage):
             font_family="Montserrat Medium", size=10, color="#FF0000"
         )
 
+        _other = next((c for c in cats if c.name == "Другое"), None)
         category_dd = ft.Dropdown(
             label="Категория",
             border_color="#6C63FF",
             options=[ft.dropdown.Option(str(c.id), c.name) for c in cats],
-            value=str(self._selected_category_id) if self._selected_category_id else None,
+            value=str(self._selected_category_id) if self._selected_category_id else (str(_other.id) if _other else None),
             error_style=error_style,
         )
         amount_field = ft.TextField(
             label="Сумма",
             border_color="#6C63FF",
-            max_length=10,
             error_style=error_style,
         )
         desc_field = ft.TextField(

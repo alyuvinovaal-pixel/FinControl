@@ -358,7 +358,8 @@ class TransactionsPage(BasePage):
         def load_categories(type_val):
             cats = self._ctrl.get_categories(type_=type_val)
             category_dd.options = [ft.dropdown.Option(str(c.id), c.name) for c in cats]
-            category_dd.value = None
+            _other = next((c for c in cats if c.name == "Другое"), None)
+            category_dd.value = str(_other.id) if _other else None
             self.page_ref.update()
 
         type_field.on_change = lambda e: load_categories(type_field.value)
@@ -408,10 +409,11 @@ class TransactionsPage(BasePage):
             self.refresh()
 
         bs.content = ft.Container(
-            padding=ft.Padding.only(left=20, right=20, top=24, bottom=32),
+            padding=ft.Padding.only(left=20, right=20, top=16, bottom=16),
             content=ft.Column(
                 tight=True,
-                spacing=16,
+                spacing=8,
+                scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
