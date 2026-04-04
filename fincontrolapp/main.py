@@ -1,7 +1,7 @@
 import json
 import os
 import flet as ft
-from pages import HomePage, TransactionsPage, GoalsPage, SettingsPage, SubscriptionsPage, IncomePage, ExpensesPage
+from pages import HomePage, TransactionsPage, GoalsPage, SettingsPage, SubscriptionsPage, IncomePage, ExpensesPage, AnalyticsPage
 from pages.auth import AuthPage
 from components import AppTheme
 from controllers import (HomeController, GoalsController, SubscriptionsController,
@@ -195,12 +195,13 @@ def main(page: ft.Page):
         uid = page.data["user_id"]
         pages = {
             0: HomePage(page, HomeController(uid)),
-            1: TransactionsPage(page, TransactionsController(uid)),
+            1: AnalyticsPage(page),
             2: GoalsPage(page, GoalsController(uid)),
             3: SettingsPage(page, SettingsController(uid)),
             4: SubscriptionsPage(page, SubscriptionsController(uid)),
             5: IncomePage(page, IncomeController(uid)),
             6: ExpensesPage(page, ExpensesController(uid)),
+            7: TransactionsPage(page, TransactionsController(uid)),
         }
 
         def logout():

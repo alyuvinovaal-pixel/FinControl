@@ -24,6 +24,13 @@ class SubscriptionsController:
                 start_date or str(date.today())
             )
 
+    def update_subscription(self, subscription_id: int, name: str, amount: float,
+                            charge_day: int, period: str, start_date: str):
+        with get_connection() as con:
+            SubscriptionService(SubscriptionRepository(con)).update_subscription(
+                subscription_id, name, amount, charge_day, period, start_date
+            )
+
     def delete_subscription(self, subscription_id: int):
         with get_connection() as con:
             SubscriptionService(SubscriptionRepository(con)).delete_subscription(subscription_id)

@@ -31,10 +31,11 @@ class IncomeController:
                 self._user_id, 'income', amount, category_id, description, date, is_recurring
             )
 
-    def update_transaction(self, transaction_id: int, amount: float, date: str):
+    def update_transaction(self, transaction_id: int, amount: float,
+                           category_id: int, description: str | None, date: str):
         with get_connection() as con:
             TransactionService(TransactionRepository(con)).update_transaction(
-                transaction_id, amount, date
+                transaction_id, 'income', amount, category_id, description, date
             )
 
     def delete_transaction(self, transaction_id: int):

@@ -19,6 +19,10 @@ class GoalsController:
             service = GoalService(repo)
             service.add_goal(self._user_id, name, target_amount, deadline)
 
+    def update_goal(self, goal_id, name, target_amount, deadline=None):
+        with get_connection() as con:
+            GoalService(GoalRepository(con)).update_goal(self._user_id, goal_id, name, target_amount, deadline)
+
     def delete_goal(self, goal_id):
         with get_connection() as con:
             repo = GoalRepository(con)

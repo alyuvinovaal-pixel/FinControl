@@ -17,7 +17,7 @@ class TransactionRepository:
     def get_transactions(self, user_id, type_=None, category_id=None, limit=None):
         query = '''
             SELECT t.id, t.type, t.amount, t.description, t.date, t.is_recurring,
-                c.name as category_name
+                t.category_id, c.name as category_name
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = ?
@@ -40,10 +40,10 @@ class TransactionRepository:
         self.con.execute('DELETE FROM transactions WHERE id = ?', (transaction_id,))
 
 
-    def update_transaction(self, transaction_id, amount, date):
+    def update_transaction(self, transaction_id, type_, amount, category_id, description, date):
         self.con.execute(
-            'UPDATE transactions SET amount=?, date=? WHERE id=?',
-            (amount, date, transaction_id)
+            'UPDATE transactions SET type=?, amount=?, category_id=?, description=?, date=? WHERE id=?',
+            (type_, amount, category_id, description, date, transaction_id)
         )
 
     def get_balance(self, user_id):

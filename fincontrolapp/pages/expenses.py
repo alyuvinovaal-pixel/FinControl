@@ -175,6 +175,12 @@ class ExpensesPage(BasePage):
                                 weight=ft.FontWeight.W_600,
                             ),
                             ft.IconButton(
+                                ft.Icons.EDIT_OUTLINED,
+                                icon_color="#555555",
+                                icon_size=18,
+                                on_click=lambda e, tr=t: self._open_edit_dialog(tr),
+                            ),
+                            ft.IconButton(
                                 ft.Icons.DELETE_OUTLINE,
                                 icon_color="#555555",
                                 icon_size=18,
@@ -448,6 +454,183 @@ class ExpensesPage(BasePage):
                             ),
                             ft.TextButton(
                                 "Добавить", on_click=on_submit,
+                                style=ft.ButtonStyle(
+                                    color="#483EB7",
+                                    text_style=ft.TextStyle(
+                                        font_family="Montserrat SemiBold", size=14),
+                                ),
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        )
+
+        self.page.overlay.append(bs)
+        bs.open = True
+        self.page.update()
+
+    def _open_edit_dialog(self, transaction):
+        cats = self._ctrl.get_categories()
+
+        error_style = ft.TextStyle(
+            font_family="Montserrat Medium", size=10, color="#FF0000"
+        )
+
+        category_dd = ft.Dropdown(
+            label="Категория",
+            border_color="#6C63FF",
+            options=[ft.dropdown.Option(str(c.id), c.name) for c in cats],
+            value=str(transaction["category_id"]),
+            error_style=error_style,
+        )
+        amount_field = ft.TextField(
+            label="Сумма",
+            value=str(int(transaction["amount"]) if transaction["amount"] == int(transaction["amount"]) else transaction["amount"]),
+            border_color="#6C63FF",
+            error_style=error_style,
+        )
+        desc_field = ft.TextField(
+            label="Описание (необязательно)",
+            value=transaction["description"] or "",
+            border_color="#6C63FF",
+        )
+
+        raw_date = transaction["date"]
+        try:
+            d = datetime.datetime.strptime(raw_date, "%Y-%m-%d").date()
+            display_date = d.strftime("%d.%m.%Y")
+        except Exception:
+            display_date = raw_date
+
+        date_field = ft.TextField(
+            label="Дата",
+            value=display_date,
+            read_only=True,
+            border_color="#6C63FF",
+            suffix_icon=ft.Icons.CALENDAR_MONTH,
+        )
+
+        def on_date_selected(e):
+            date_field.value = (
+                e.control.value.strftime("%d.%m.%Y") if e.control.value else display_date
+            )
+            date_field.update()
+
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            first_date=datetime.datetime(2000, 1, 1),
+            last_date=datetime.datetime(2030, 12, 31),
+        )
+        self.page.overlay.append(date_picker)
+
+        def open_date_picker(e):
+            self.page.dialog = date_picker
+            date_picker.open = True
+            self.page.update()
+
+        date_field.on_click = open_date_picker
+
+        def validate_category(e):
+            category_dd.error = None if category_dd.value else "Выберите категорию"
+            category_dd.update()
+
+        def validate_amount(e):
+            v = (amount_field.value or "").replace(",", ".")
+            if not v:
+                amount_field.error = "Введите сумму"
+            else:
+                try:
+                    amount_field.error = (
+                        None if parse_amount(amount_field.value) > 0
+                        else "Сумма должна быть больше нуля"
+                    )
+                except ValueError:
+                    amount_field.error = "Введите число, например: 500"
+            amount_field.update()
+
+        category_dd.on_change = validate_category
+        amount_field.on_change = validate_amount
+
+        bs = ft.BottomSheet(open=False, content=ft.Container())
+
+        def on_cancel(e):
+            bs.open = False
+            self.page.update()
+
+        def on_submit(e):
+            category_dd.error = None
+            amount_field.error = None
+
+            if not category_dd.value:
+                category_dd.error = "Выберите категорию"
+
+            amount = None
+            if not amount_field.value:
+                amount_field.error = "Введите сумму"
+            else:
+                try:
+                    amount = parse_amount(amount_field.value)
+                    if amount <= 0:
+                        amount_field.error = "Сумма должна быть больше нуля"
+                except ValueError:
+                    amount_field.error = "Введите число, например: 500"
+
+            if any(f.error for f in (category_dd, amount_field)):
+                category_dd.update()
+                amount_field.update()
+                return
+
+            parsed_date = parse_date(date_field.value)
+
+            self._ctrl.update_transaction(
+                transaction_id=transaction["id"],
+                amount=amount,
+                category_id=int(category_dd.value),
+                description=desc_field.value or None,
+                date=str(parsed_date),
+            )
+            self.rebuild()
+            pages = self.page_ref.data.get("pages", {})
+            if 0 in pages:
+                pages[0].rebuild()
+            bs.open = False
+            self.page.update()
+
+        bs.content = ft.Container(
+            padding=ft.Padding.only(left=20, right=20, top=24, bottom=32),
+            content=ft.Column(
+                tight=True,
+                spacing=16,
+                controls=[
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Text(
+                                "Редактировать расход",
+                                color="#000000",
+                                font_family="Montserrat SemiBold",
+                                size=24,
+                            ),
+                        ],
+                    ),
+                    category_dd,
+                    amount_field,
+                    desc_field,
+                    date_field,
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.END,
+                        controls=[
+                            ft.TextButton(
+                                "Отмена", on_click=on_cancel,
+                                style=ft.ButtonStyle(
+                                    color="#483EB7",
+                                    text_style=ft.TextStyle(
+                                        font_family="Montserrat SemiBold", size=14),
+                                ),
+                            ),
+                            ft.TextButton(
+                                "Сохранить", on_click=on_submit,
                                 style=ft.ButtonStyle(
                                     color="#483EB7",
                                     text_style=ft.TextStyle(

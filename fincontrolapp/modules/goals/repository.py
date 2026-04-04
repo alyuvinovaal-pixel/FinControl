@@ -31,6 +31,12 @@ class GoalRepository:
                 (user_id, amount, savings_cat['id'], str(date.today()))
             )
 
+    def update_goal(self, goal_id, user_id, name, target_amount, deadline):
+        self.con.execute(
+            'UPDATE goals SET name=?, target_amount=?, deadline=? WHERE id=? AND user_id=?',
+            (name, target_amount, deadline, goal_id, user_id)
+        )
+
     def delete_goal(self, user_id, goal_id):
         self.con.execute(
             'DELETE FROM goals WHERE id = ? AND user_id = ?',

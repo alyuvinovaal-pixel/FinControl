@@ -17,6 +17,10 @@ class SubscriptionService:
                          start_date: str | None = None):
         self.repository.add(user_id, name, amount, charge_day, period, start_date)
 
+    def update_subscription(self, subscription_id: int, name: str, amount: float,
+                            charge_day: int, period: str, start_date: str):
+        self.repository.update(subscription_id, name, amount, charge_day, period, start_date)
+
     def delete_subscription(self, subscription_id: int):
         self.repository.delete(subscription_id)
 

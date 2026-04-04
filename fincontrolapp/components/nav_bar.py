@@ -5,7 +5,7 @@ import flet as ft
 def build_nav(selected_index: int, on_navigate: callable) -> ft.Container:
     items = [
         ("navigation/home.svg",         0),
-        ("navigation/transactions.svg", 1),
+        ("navigation/analytics.svg",    1),
         ("navigation/goals.svg",        2),
         ("navigation/settings.svg",     3),
     ]

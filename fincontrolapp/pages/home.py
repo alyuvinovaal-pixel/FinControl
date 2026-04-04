@@ -72,15 +72,23 @@ class HomePage(BasePage):
                 self._graph_svg_preview(),
             ])
 
-        controls.extend([
-            ft.Text(
-                "Последние операции",
-                size=20,
-                font_family="Montserrat Semibold",
-                color="#000000",
-            ),
-            self._transactions_list(transactions),
-        ])
+        controls.append(
+            ft.GestureDetector(
+                on_tap=lambda e: self.page_ref.data["navigate"](7),
+                content=ft.Column(
+                    controls=[
+                        ft.Text(
+                            "Последние операции",
+                            size=20,
+                            font_family="Montserrat Semibold",
+                            color="#000000",
+                        ),
+                        self._transactions_list(transactions),
+                    ],
+                    spacing=20,
+                ),
+            )
+        )
 
         return ft.Column(controls=controls, spacing=20)
 

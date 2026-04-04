@@ -31,6 +31,13 @@ class SubscriptionRepository:
             (user_id, name, amount, charge_day, period, start_date)
         )
 
+    def update(self, subscription_id: int, name: str, amount: float,
+               charge_day: int, period: str, start_date: str):
+        self.con.execute(
+            'UPDATE subscriptions SET name=?, amount=?, charge_day=?, period=?, start_date=? WHERE id=?',
+            (name, amount, charge_day, period, start_date, subscription_id)
+        )
+
     def delete(self, subscription_id: int):
         self.con.execute(
             'DELETE FROM subscriptions WHERE id = ?',

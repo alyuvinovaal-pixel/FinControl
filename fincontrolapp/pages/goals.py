@@ -214,22 +214,37 @@ class GoalsPage(BasePage):
                                         ),
                                     ),
                                 ),
-                                ft.TextButton(
-                                    "Удалить",
-                                    icon=ft.Icons.DELETE_OUTLINE,
-                                    style=ft.ButtonStyle(
-                                        color=ft.Colors.with_opacity(0.6, "#FF7E1C"),
-                                        text_style=ft.TextStyle(
-                                            font_family="Montserrat SemiBold",
-                                            size=13,
+                                ft.Row(
+                                    [
+                                        ft.IconButton( #Изменить
+                                            icon=ft.Icons.EDIT_OUTLINED,
+                                            style=ft.ButtonStyle(
+                                                color="#253A82",
+                                                text_style=ft.TextStyle(
+                                                    font_family="Montserrat SemiBold",
+                                                    size=13,
+                                                ),
+                                            ),
+                                            on_click=lambda e, goal=g: self._open_edit_dialog(goal),
                                         ),
-                                    ),
-                                    on_click=lambda e, gid=g["id"], gname=g["name"]: self._confirm_delete(
-                                        gid, gname
-                                    ),
+                                        ft.IconButton( #Удалить
+                                            icon=ft.Icons.DELETE_OUTLINE,
+                                            style=ft.ButtonStyle(
+                                                color=ft.Colors.with_opacity(0.6, "#FF7E1C"),
+                                                text_style=ft.TextStyle(
+                                                    font_family="Montserrat SemiBold",
+                                                    size=13,
+                                                ),
+                                            ),
+                                            on_click=lambda e, gid=g["id"], gname=g["name"]: self._confirm_delete(
+                                                gid, gname
+                                            ),
+                                        ),
+                                    ],
+                                    spacing=0,
                                 ),
                             ],
-                            spacing=0,
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
                     ],
                     spacing=10,
@@ -613,6 +628,178 @@ class GoalsPage(BasePage):
                             ),
                             ft.TextButton(
                                 "Пополнить",
+                                on_click=on_submit,
+                                style=ft.ButtonStyle(
+                                    color="#483EB7",
+                                    text_style=ft.TextStyle(
+                                        font_family="Montserrat SemiBold", size=14
+                                    ),
+                                ),
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        )
+
+        self.page.overlay.append(bs)
+        bs.open = True
+        self.page.update()
+
+    def _open_edit_dialog(self, goal):
+        error_style = ft.TextStyle(
+            font_family="Montserrat Medium",
+            size=10,
+            color="#FF0000",
+        )
+
+        name_field = ft.TextField(
+            label="Название цели",
+            value=goal["name"],
+            border_color="#6976EB",
+            text_style=ft.TextStyle(font_family="Montserrat SemiBold", size=15),
+            error_style=error_style,
+        )
+        amount_field = ft.TextField(
+            label="Целевая сумма",
+            value=str(int(goal["target_amount"]) if goal["target_amount"] == int(goal["target_amount"]) else goal["target_amount"]),
+            border_color="#6976EB",
+            text_style=ft.TextStyle(font_family="Montserrat SemiBold", size=15),
+            error_style=error_style,
+        )
+        deadline_display = ft.TextField(
+            label="Дата (необязательно)",
+            hint_text="Выберите дату",
+            value=goal["deadline"] or "",
+            read_only=True,
+            border_color="#6976EB",
+            text_style=ft.TextStyle(font_family="Montserrat SemiBold", size=15),
+            suffix_icon=ft.Icons.CALENDAR_MONTH,
+            error_style=error_style,
+        )
+
+        def validate_name(e):
+            name_field.error = (
+                None if (name_field.value or "").strip() else "Введите название цели"
+            )
+            name_field.update()
+
+        def validate_amount(e):
+            v = (amount_field.value or "").replace(",", ".")
+            if not v:
+                amount_field.error = "Введите сумму"
+            else:
+                try:
+                    amount_field.error = (
+                        None if float(v) > 0 else "Сумма должна быть больше нуля"
+                    )
+                except ValueError:
+                    amount_field.error = "Введите число, например: 10000"
+            amount_field.update()
+
+        name_field.on_change = validate_name
+        amount_field.on_change = validate_amount
+
+        def on_date_selected(e):
+            deadline_display.value = (
+                e.control.value.strftime("%Y-%m-%d") if e.control.value else ""
+            )
+            deadline_display.update()
+
+        date_picker = ft.DatePicker(
+            on_change=on_date_selected,
+            first_date=datetime.datetime(year=2000, month=1, day=1),
+            last_date=datetime.datetime(year=2030, month=12, day=31),
+        )
+        self.page.overlay.append(date_picker)
+
+        def open_date_picker(e):
+            self.page.dialog = date_picker
+            date_picker.open = True
+            self.page.update()
+
+        deadline_display.on_click = open_date_picker
+
+        bs = ft.BottomSheet(open=False, content=ft.Container())
+
+        def on_cancel(e):
+            bs.open = False
+            self.page.update()
+
+        def on_submit(e):
+            name_field.error = None
+            amount_field.error = None
+            deadline_display.error = None
+
+            name = (name_field.value or "").strip()
+            if not name:
+                name_field.error = "Введите название цели"
+
+            amount = None
+            if not amount_field.value:
+                amount_field.error = "Введите сумму"
+            else:
+                try:
+                    amount = float(amount_field.value.replace(",", "."))
+                    if amount <= 0:
+                        amount_field.error = "Сумма должна быть больше нуля"
+                except ValueError:
+                    amount_field.error = "Введите число, например: 10000"
+
+            deadline = (deadline_display.value or "").strip() or None
+            if deadline:
+                try:
+                    from datetime import date as _date
+                    _date.fromisoformat(deadline)
+                except ValueError:
+                    deadline_display.error = "Формат даты: ГГГГ-ММ-ДД"
+
+            if any(f.error for f in (name_field, amount_field, deadline_display)):
+                name_field.update()
+                amount_field.update()
+                deadline_display.update()
+                return
+
+            self._ctrl.update_goal(goal_id=goal["id"], name=name, target_amount=amount, deadline=deadline)
+            bs.open = False
+            self.page.update()
+            self.refresh()
+
+        bs.content = ft.Container(
+            padding=ft.Padding.only(left=20, right=20, top=24, bottom=32),
+            content=ft.Column(
+                tight=True,
+                spacing=16,
+                controls=[
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Text(
+                                "Редактировать цель",
+                                color="#000000",
+                                font_family="Montserrat SemiBold",
+                                size=24,
+                            ),
+                        ],
+                    ),
+                    name_field,
+                    amount_field,
+                    deadline_display,
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.END,
+                        controls=[
+                            ft.TextButton(
+                                "Отмена",
+                                on_click=on_cancel,
+                                style=ft.ButtonStyle(
+                                    color="#483EB7",
+                                    text_style=ft.TextStyle(
+                                        font_family="Montserrat SemiBold", size=14
+                                    ),
+                                ),
+                            ),
+                            ft.TextButton(
+                                "Сохранить",
                                 on_click=on_submit,
                                 style=ft.ButtonStyle(
                                     color="#483EB7",
