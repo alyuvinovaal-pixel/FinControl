@@ -54,10 +54,13 @@ class SettingsPage(BasePage):
             _close_dialog(self.page_ref, dlg)
 
         def on_submit(e):
-            self._ctrl.update_username(username_field.value.strip() or None)
+            try:
+                self._ctrl.update_username(username_field.value.strip() or None)
+            except Exception:
+                self._show_error("Не удалось сохранить имя")
+                return
             _close_dialog(self.page_ref, dlg)
-            self.page_ref.snack_bar = ft.SnackBar(ft.Text("Имя сохранено ✓"), open=True)
-            self.page_ref.update()
+            self._show_success("Имя сохранено")
 
         dlg.content = ft.Column([
             ft.Text(contact_hint, size=12, color="#888888") if contact_hint else ft.Container(),
@@ -79,10 +82,9 @@ class SettingsPage(BasePage):
 
         def on_submit(e):
             self.page_ref.data["_s_notifications"] = switch.value
-            msg = "Уведомления включены ✓" if switch.value else "Уведомления выключены"
+            msg = "Уведомления включены" if switch.value else "Уведомления выключены"
             _close_dialog(self.page_ref, dlg)
-            self.page_ref.snack_bar = ft.SnackBar(ft.Text(msg), open=True)
-            self.page_ref.update()
+            self._show_success(msg)
 
         dlg.content = ft.Column([
             ft.Text("Push-уведомления работают после сборки на устройстве.",
@@ -116,8 +118,7 @@ class SettingsPage(BasePage):
         def on_submit(e):
             self.page_ref.data["_s_currency"] = dd.value
             _close_dialog(self.page_ref, dlg)
-            self.page_ref.snack_bar = ft.SnackBar(ft.Text("Валюта сохранена ✓"), open=True)
-            self.page_ref.update()
+            self._show_success("Валюта изменена")
 
         dlg.content = ft.Column([dd], tight=True)
         dlg.actions = [
@@ -166,9 +167,10 @@ class SettingsPage(BasePage):
         def on_confirm(e):
             try:
                 self._ctrl.reset_data()
-                self.page_ref.snack_bar = ft.SnackBar(ft.Text("Данные удалены"), open=True)
-                self.page_ref.update()
-            finally:
+                _close_dialog(self.page_ref, dlg)
+                self._show_success("Данные сброшены")
+            except Exception:
+                self._show_error("Не удалось сбросить данные")
                 _close_dialog(self.page_ref, dlg)
 
         dlg.content = ft.Text("Все транзакции, цели и подписки будут удалены. Отменить нельзя.")
@@ -187,9 +189,9 @@ class SettingsPage(BasePage):
         def on_confirm(e):
             try:
                 self._ctrl.delete_account()
-                self.page_ref.snack_bar = ft.SnackBar(ft.Text("Аккаунт удален"), open=True)
-                self.page_ref.update()
                 self.page_ref.data["logout"]()
+            except Exception:
+                self._show_error("Не удалось удалить аккаунт")
             finally:
                 _close_dialog(self.page_ref, dlg)
 
